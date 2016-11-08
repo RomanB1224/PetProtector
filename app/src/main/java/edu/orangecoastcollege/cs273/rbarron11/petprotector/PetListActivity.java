@@ -1,6 +1,7 @@
 package edu.orangecoastcollege.cs273.rbarron11.petprotector;
 
 import android.Manifest;
+import android.app.ListActivity;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -15,19 +16,33 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class PetListActivity extends AppCompatActivity {
 
+    private EditText nameEditText;
+    private EditText detailsEditText;
+    private EditText phoneEditText;
+
+    private DBHelper database;
+    private List<Pet> petList;
+    private PetListAdapter petListAdapter;
+
+    private ListView petListView;
+
 
     private ImageView petImageView;
-    //this member variable stores uri to whatever image has been selected
-    //Default: none.png (R.drawable.none)
+
     private Uri imageURI;
     private static final int REQUEST_CODE = 1;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,6 +56,73 @@ public class PetListActivity extends AppCompatActivity {
 
         //Set the imageUri of the ImageView in code
         petImageView.setImageURI(imageURI);
+
+
+        this.deleteDatabase(DBHelper.DATABASE_NAME);
+        database = new DBHelper(this);
+        petList = database.getAllPets();
+
+        petListAdapter = new PetListAdapter(this, R.layout.pet_list_item_layout, petList);
+        petListView = (ListView) findViewById(R.id.petListView);
+        petListView.setAdapter(petListAdapter);
+
+        nameEditText = (EditText) findViewById(R.id.nameEditText);
+        detailsEditText = (EditText) findViewById(R.id.detailsEditText);
+        phoneEditText = (EditText) findViewById(R.id.phoneEditText);
+
+    }
+
+    public void viewPetDetails(View view)
+    {
+        Intent petDetailsIntent = new Intent(this, PetDetailsActivity.class);
+        Pet pet  = (Pet) view.getTag();
+        Uri imageUri = pet.getImageURI();
+        String petName = pet.getName();
+        String petDetails = pet.getDetails();
+        String petPhone = pet.getPhone();
+
+        petDetailsIntent.putExtra("Name", petName);
+        petDetailsIntent.putExtra("Details", petDetails);
+        petDetailsIntent.putExtra("Phone", petPhone);
+        petDetailsIntent.putExtra("Image", String.valueOf(imageUri));
+
+        startActivity(petDetailsIntent);
+
+    }
+
+    public void addPet(View view)
+    {
+        String name = nameEditText.getText().toString();
+        String details = detailsEditText.getText().toString();
+        String phone = phoneEditText.getText().toString();
+
+        if(name.isEmpty())
+        {
+            Toast.makeText(this, "Pet name cannot be empty.",
+                    Toast.LENGTH_SHORT).show();
+        }
+        else if (details.isEmpty())
+        {
+            Toast.makeText(this, "Pet description cannot be empty.",
+                    Toast.LENGTH_SHORT).show();
+        }
+        else if(phone.isEmpty())
+        {
+            Toast.makeText(this, "Phone number cannot be empty.",
+                    Toast.LENGTH_SHORT).show();
+        }
+        else
+        {
+            Pet pet = new Pet(details, imageURI, name, phone);
+            petListAdapter.add(pet);
+            database.addPet(pet);
+
+            nameEditText.setText("");
+            detailsEditText.setText("");
+            phoneEditText.setText("");
+            imageURI = getUriResource(this, R.drawable.none);
+            petImageView.setImageURI(imageURI);
+        }
     }
 
     public void selectPetImage(View view)
